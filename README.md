@@ -43,12 +43,16 @@ go run cmd/main.go
 - `APROVADO` → reembolso aprovado
 - `REJEITADO` → reembolso rejeitado
 
+```bash
+
 go mod tidy        # baixa jwt, bcrypt, pq
 go run cmd/main.go
+
+```
 ```
 
 **Fluxo de uso:**
-```
+
 POST /auth/register  → retorna access_token + refresh_token
 POST /auth/login     → retorna access_token + refresh_token
 POST /auth/refresh   → renova com o refresh_token
@@ -60,3 +64,4 @@ go run cmd/main.go --migrate             # rodar migrations
 go run cmd/main.go --migrate --seed      # migrations + seeders
 go run cmd/main.go --fresh --seed        # drop + migrate + seed
 go run cmd/main.go                       # só sobe o servidor
+```
