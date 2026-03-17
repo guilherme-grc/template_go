@@ -1,29 +1,39 @@
-# Sistema de Reembolso
-
-API REST em Go para gerenciamento de reembolsos.
+#Template API
+A robust REST API built in Go for managing corporate reimbursements, featuring JWT authentication, structured event logging, and a modular architecture inspired by Laravel’s clear separation of concerns.
 
 ## Estrutura
 
 ```
-reembolso/
-├── cmd/           # Ponto de entrada da aplicação
-├── config/        # Configurações e variáveis de ambiente
+template-api/
+├── cmd/
+│               # Application entry point (main.go)
 ├── internal/
-│   ├── handler/   # HTTP handlers
-│   ├── service/   # Regras de negócio
-│   ├── repository/# Acesso ao banco de dados
-│   └── model/     # Entidades e structs
-└── db/migrations/ # Scripts SQL
+│   ├── auth/            # JWT (Access/Refresh), Bcrypt, and Context logic
+│   ├── config/          # Environment variable loading (godotenv)
+│   ├── handler/         # HTTP Handlers (Controllers)
+│   ├── logger/          # Structured JSON logging (slog)
+│   ├── middleware/      # Auth, CORS, Rate Limiting, and Recovery
+│   ├── model/           # Entities (User, Reimbursement) and Request DTOs
+│   ├── repository/      # Database Access Layer (PostgreSQL)
+│   ├── service/         # Business Logic Layer
+│   └── validation/      # Custom validation logic
+├── seeds/               # Database seeders
+└── .env                 # Environment variables (JWT_SECRET, DB_URL, etc.)
 ```
 
 ## Como rodar
 
 ```bash
-# Instalar dependências
+# Install dependencies
 go mod tidy
 
-# Rodar a aplicação
-go run cmd/main.go
+# Run the application (Server only)
+go run ./cmd
+
+# Database Management (CLI Commands)
+go run ./cmd --migrate           # Run migrations
+go run ./cmd --migrate --seed    # Run migrations and seeders
+go run ./cmd --fresh --seed      # Drop all tables, migrate, and seed
 ```
 
 ## Endpoints
@@ -31,37 +41,5 @@ go run cmd/main.go
 | Método | Rota                        | Descrição              |
 |--------|-----------------------------|------------------------|
 | GET    | /health                     | Health check           |
-| POST   | /reembolsos                 | Criar reembolso        |
-| GET    | /reembolsos/{id}            | Buscar por ID          |
-| GET    | /reembolsos?usuario_id=1    | Listar por usuário     |
-| PATCH  | /reembolsos/{id}/aprovar    | Aprovar reembolso      |
-| PATCH  | /reembolsos/{id}/rejeitar   | Rejeitar reembolso     |
 
-## Status possíveis
 
-- `PENDENTE` → estado inicial
-- `APROVADO` → reembolso aprovado
-- `REJEITADO` → reembolso rejeitado
-
-```bash
-
-go mod tidy        # baixa jwt, bcrypt, pq
-go run cmd/main.go
-
-```
-```
-
-**Fluxo de uso:**
-
-POST /auth/register  → retorna access_token + refresh_token
-POST /auth/login     → retorna access_token + refresh_token
-POST /auth/refresh   → renova com o refresh_token
-GET  /auth/me        → Authorization: Bearer <access_token>
-POST /reembolsos     → Authorization: Bearer <access_token>
-
-go mod tidy                              # instalar dependências
-go run cmd/main.go --migrate             # rodar migrations
-go run cmd/main.go --migrate --seed      # migrations + seeders
-go run cmd/main.go --fresh --seed        # drop + migrate + seed
-go run cmd/main.go                       # só sobe o servidor
-```
