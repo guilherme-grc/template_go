@@ -1,19 +1,19 @@
 package model
 
-// LoginRequest — body do POST /auth/login
+// LoginRequest — body for POST /auth/login
 type LoginRequest struct {
-	Email string `json:"email"`
-	Senha string `json:"senha"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
 }
 
-// RegisterRequest — body do POST /auth/register
+// RegisterRequest — body for POST /auth/register
 type RegisterRequest struct {
-	Nome  string `json:"nome"`
-	Email string `json:"email"`
-	Senha string `json:"senha"`
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
 }
 
-// RefreshRequest — body do POST /auth/refresh
+// RefreshRequest — body for POST /auth/refresh
 type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }

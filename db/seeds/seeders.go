@@ -4,17 +4,17 @@ import (
 	"database/sql"
 	"fmt"
 
-	"reembolso/internal/auth"
-	"reembolso/internal/logger"
+	"template.go/internal/auth"
+	"template.go/internal/logger"
 )
 
-// Seeder — equivalente à interface Seeder do Laravel
+// Seeder - Equivalent to Laravel's Seeder interface
 type Seeder interface {
 	Run(db *sql.DB) error
 	Name() string
 }
 
-// SeederRunner — equivalente ao DatabaseSeeder do Laravel
+// SeederRunner - Equivalent to Laravel's DatabaseSeeder
 type SeederRunner struct {
 	db      *sql.DB
 	seeders []Seeder
@@ -24,93 +24,57 @@ func NewSeederRunner(db *sql.DB) *SeederRunner {
 	return &SeederRunner{
 		db: db,
 		seeders: []Seeder{
-			&UsuarioSeeder{},
-			&ReembolsoSeeder{},
+			&UserSeeder{},
 		},
 	}
 }
 
-// Run — equivalente ao php artisan db:seed
+// Run - Equivalent to 'php artisan db:seed'
 func (r *SeederRunner) Run() error {
 	for _, s := range r.seeders {
-		logger.Info("rodando seeder", logger.With("seeder", s.Name()))
+		logger.Info("running seeder", logger.With("seeder", s.Name()))
+
 		if err := s.Run(r.db); err != nil {
-			return fmt.Errorf("seeder %s falhou: %w", s.Name(), err)
+			return fmt.Errorf("seeder %s failed: %w", s.Name(), err)
 		}
-		logger.Info("seeder concluído", logger.With("seeder", s.Name()))
+
+		logger.Info("seeder completed", logger.With("seeder", s.Name()))
 	}
 	return nil
 }
 
-// ──────────────────────────────────────────────
-// UsuarioSeeder
-// ──────────────────────────────────────────────
+// ---------------------------------------------------------
+// UserSeeder
+// ---------------------------------------------------------
 
-type UsuarioSeeder struct{}
+type UserSeeder struct{}
 
-func (s *UsuarioSeeder) Name() string { return "UsuarioSeeder" }
+func (s *UserSeeder) Name() string { return "UserSeeder" }
 
-func (s *UsuarioSeeder) Run(db *sql.DB) error {
-	usuarios := []struct {
-		nome  string
-		email string
-		senha string
+func (s *UserSeeder) Run(db *sql.DB) error {
+	users := []struct {
+		name     string
+		email    string
+		password string
 	}{
-		{"Admin", "admin@exemplo.com", "password123"},
-		{"João Silva", "joao@exemplo.com", "password123"},
-		{"Maria Souza", "maria@exemplo.com", "password123"},
+		{"Admin", "admin@example.com", "password123"},
+		{"John Doe", "john@example.com", "password123"},
+		{"Jane Smith", "jane@example.com", "password123"},
 	}
 
-	for _, u := range usuarios {
-		hash, err := auth.HashSenha(u.senha)
+	for _, u := range users {
+		// Note: Changed from HashSenha to HashPassword to follow English naming
+		hash, err := auth.HashPassword(u.password)
 		if err != nil {
 			return err
 		}
+
 		_, err = db.Exec(`
-			INSERT INTO usuarios (nome, email, senha_hash)
+			INSERT INTO users (name, email, password)
 			VALUES ($1, $2, $3)
 			ON CONFLICT (email) DO NOTHING
-		`, u.nome, u.email, hash)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
+		`, u.name, u.email, hash)
 
-// ──────────────────────────────────────────────
-// ReembolsoSeeder
-// ──────────────────────────────────────────────
-
-type ReembolsoSeeder struct{}
-
-func (s *ReembolsoSeeder) Name() string { return "ReembolsoSeeder" }
-
-func (s *ReembolsoSeeder) Run(db *sql.DB) error {
-	// Busca o primeiro usuário para associar os reembolsos
-	var usuarioID int64
-	if err := db.QueryRow(`SELECT id FROM usuarios LIMIT 1`).Scan(&usuarioID); err != nil {
-		return fmt.Errorf("nenhum usuário encontrado para seeder de reembolsos: %w", err)
-	}
-
-	reembolsos := []struct {
-		descricao string
-		valor     float64
-		categoria string
-		status    string
-	}{
-		{"Passagem aérea para SP", 450.00, "TRANSPORTE", "PENDENTE"},
-		{"Hotel - Conferência Tech", 320.00, "HOSPEDAGEM", "APROVADO"},
-		{"Almoço com cliente", 89.90, "ALIMENTACAO", "PENDENTE"},
-		{"Uber para reunião", 45.50, "TRANSPORTE", "REJEITADO"},
-		{"Material de escritório", 120.00, "MATERIAL", "APROVADO"},
-	}
-
-	for _, r := range reembolsos {
-		_, err := db.Exec(`
-			INSERT INTO reembolsos (usuario_id, descricao, valor, categoria, status)
-			VALUES ($1, $2, $3, $4, $5)
-		`, usuarioID, r.descricao, r.valor, r.categoria, r.status)
 		if err != nil {
 			return err
 		}
