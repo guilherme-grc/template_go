@@ -3,101 +3,104 @@ package service
 import (
 	"errors"
 
-	"reembolso/internal/auth"
-	"reembolso/internal/model"
-	"reembolso/internal/repository"
-	"reembolso/internal/validation"
+	"template.go/internal/auth"
+	"template.go/internal/model"
+	"template.go/internal/repository"
+	"template.go/internal/validation"
 )
 
 type AuthService struct {
-	usuarioRepo *repository.UsuarioRepository
-	jwtSvc      *auth.JWTService
+	userRepo *repository.UserRepository
+	jwtSvc   *auth.JWTService
 }
 
-func NewAuthService(repo *repository.UsuarioRepository, jwtSvc *auth.JWTService) *AuthService {
-	return &AuthService{usuarioRepo: repo, jwtSvc: jwtSvc}
+func NewAuthService(repo *repository.UserRepository, jwtSvc *auth.JWTService) *AuthService {
+	return &AuthService{userRepo: repo, jwtSvc: jwtSvc}
 }
 
-// Register com validação — equivalente ao FormRequest do Laravel
-func (s *AuthService) Register(req model.RegisterRequest) (*model.Usuario, *auth.TokenPair, error) {
+// Register with validation — equivalent to Laravel's FormRequest/RegisterController
+func (s *AuthService) Register(req model.RegisterRequest) (*model.User, *auth.TokenPair, error) {
 	v := validation.New(map[string]interface{}{
-		"nome":  req.Nome,
-		"email": req.Email,
-		"senha": req.Senha,
+		"name":     req.Name,
+		"email":    req.Email,
+		"password": req.Password,
 	})
+
 	if err := v.Validate(map[string][]string{
-		"nome":  {"required", "min:2", "max:100"},
-		"email": {"required", "email", "max:150"},
-		"senha": {"required", "min:8"},
+		"name":     {"required", "min:2", "max:100"},
+		"email":    {"required", "email", "max:150"},
+		"password": {"required", "min:8"},
 	}); err != nil {
 		return nil, nil, err
 	}
 
-	existe, err := s.usuarioRepo.EmailExiste(req.Email)
+	exists, err := s.userRepo.EmailExists(req.Email)
 	if err != nil {
 		return nil, nil, err
 	}
-	if existe {
-		return nil, nil, errors.New("email já cadastrado")
+	if exists {
+		return nil, nil, errors.New("email already registered")
 	}
 
-	senhaHash, err := auth.HashSenha(req.Senha)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	usuario, err := s.usuarioRepo.Criar(req.Nome, req.Email, senhaHash)
+	passwordHash, err := auth.HashPassword(req.Password)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	tokens, err := s.jwtSvc.GerarTokens(usuario.ID, usuario.Email)
+	user, err := s.userRepo.Create(req.Name, req.Email, passwordHash)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return usuario, tokens, nil
+	tokens, err := s.jwtSvc.GenerateTokenPair(user.ID, user.Email)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user, tokens, nil
 }
 
-// Login com validação
+// Login with validation
 func (s *AuthService) Login(req model.LoginRequest) (*auth.TokenPair, error) {
 	v := validation.New(map[string]interface{}{
-		"email": req.Email,
-		"senha": req.Senha,
+		"email":    req.Email,
+		"password": req.Password,
 	})
+
 	if err := v.Validate(map[string][]string{
-		"email": {"required", "email"},
-		"senha": {"required"},
+		"email":    {"required", "email"},
+		"password": {"required"},
 	}); err != nil {
 		return nil, err
 	}
 
-	usuario, err := s.usuarioRepo.BuscarPorEmail(req.Email)
+	user, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
-		return nil, errors.New("credenciais inválidas")
+		return nil, errors.New("invalid credentials")
 	}
 
-	if !auth.VerificarSenha(req.Senha, usuario.SenhaHash) {
-		return nil, errors.New("credenciais inválidas")
+	// Note: using the translated CheckPassword function
+	if !auth.CheckPassword(req.Password, user.Password) {
+		return nil, errors.New("invalid credentials")
 	}
 
-	return s.jwtSvc.GerarTokens(usuario.ID, usuario.Email)
+	return s.jwtSvc.GenerateTokenPair(user.ID, user.Email)
 }
 
 func (s *AuthService) Refresh(refreshToken string) (*auth.TokenPair, error) {
-	claims, err := s.jwtSvc.ValidarRefreshToken(refreshToken)
+	claims, err := s.jwtSvc.ValidateRefreshToken(refreshToken)
 	if err != nil {
-		return nil, errors.New("refresh token inválido ou expirado")
+		return nil, errors.New("invalid or expired refresh token")
 	}
 
-	usuario, err := s.usuarioRepo.BuscarPorID(claims.UsuarioID)
+	user, err := s.userRepo.FindByID(claims.UserID)
 	if err != nil {
-		return nil, errors.New("usuário não encontrado")
+		return nil, errors.New("user not found")
 	}
 
-	return s.jwtSvc.GerarTokens(usuario.ID, usuario.Email)
+	return s.jwtSvc.GenerateTokenPair(user.ID, user.Email)
 }
 
-func (s *AuthService) Me(usuarioID int64) (*model.Usuario, error) {
-	return s.usuarioRepo.BuscarPorID(usuarioID)
+func (s *AuthService) Me(userID int64) (*model.User, error) {
+	return s.userRepo.FindByID(userID)
 }

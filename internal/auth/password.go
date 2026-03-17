@@ -2,16 +2,16 @@ package auth
 
 import "golang.org/x/crypto/bcrypt"
 
-const bcryptCost = 12 // mesmo custo padrão do Laravel
+const bcryptCost = 12 // same default cost as Laravel
 
-// HashSenha — equivalente ao Hash::make($password) do Laravel
-func HashSenha(senha string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(senha), bcryptCost)
+// HashPassword — equivalent to Laravel's Hash::make($password)
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	return string(bytes), err
 }
 
-// VerificarSenha — equivalente ao Hash::check($password, $hash) do Laravel
-func VerificarSenha(senha, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(senha))
+// CheckPassword — equivalent to Laravel's Hash::check($password, $hash)
+func CheckPassword(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }

@@ -14,9 +14,9 @@ const (
 	RefreshToken TokenType = "refresh"
 )
 
-// Claims — equivalente ao payload do token no Laravel
+// Claims - Equivalent to the token payload in Laravel
 type Claims struct {
-	UsuarioID int64     `json:"usuario_id"`
+	UserID    int64     `json:"user_id"`
 	Email     string    `json:"email"`
 	TokenType TokenType `json:"token_type"`
 	jwt.RegisteredClaims
@@ -26,7 +26,7 @@ type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"` // segundos
+	ExpiresIn    int    `json:"expires_in"` // in seconds
 }
 
 type JWTService struct {
@@ -43,14 +43,14 @@ func NewJWTService(secret string, accessMin, refreshDays int) *JWTService {
 	}
 }
 
-// GerarTokens — equivalente ao Auth::attempt() + token() do Laravel
-func (j *JWTService) GerarTokens(usuarioID int64, email string) (*TokenPair, error) {
-	accessToken, err := j.gerarToken(usuarioID, email, AccessToken, time.Duration(j.accessExpiryMin)*time.Minute)
+// GenerateTokenPair - Equivalent to Laravel's Auth::attempt() + token()
+func (j *JWTService) GenerateTokenPair(userID int64, email string) (*TokenPair, error) {
+	accessToken, err := j.generateToken(userID, email, AccessToken, time.Duration(j.accessExpiryMin)*time.Minute)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := j.gerarToken(usuarioID, email, RefreshToken, time.Duration(j.refreshExpiryDays)*24*time.Hour)
+	refreshToken, err := j.generateToken(userID, email, RefreshToken, time.Duration(j.refreshExpiryDays)*24*time.Hour)
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +63,9 @@ func (j *JWTService) GerarTokens(usuarioID int64, email string) (*TokenPair, err
 	}, nil
 }
 
-func (j *JWTService) gerarToken(usuarioID int64, email string, tokenType TokenType, expiry time.Duration) (string, error) {
+func (j *JWTService) generateToken(userID int64, email string, tokenType TokenType, expiry time.Duration) (string, error) {
 	claims := Claims{
-		UsuarioID: usuarioID,
+		UserID:    userID,
 		Email:     email,
 		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -78,11 +78,11 @@ func (j *JWTService) gerarToken(usuarioID int64, email string, tokenType TokenTy
 	return token.SignedString(j.secret)
 }
 
-// ValidarToken — equivalente ao middleware auth do Laravel
-func (j *JWTService) ValidarToken(tokenStr string) (*Claims, error) {
+// ValidateToken - Equivalent to Laravel's 'auth' middleware
+func (j *JWTService) ValidateToken(tokenStr string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("método de assinatura inválido")
+			return nil, errors.New("invalid signing method")
 		}
 		return j.secret, nil
 	})
@@ -93,20 +93,20 @@ func (j *JWTService) ValidarToken(tokenStr string) (*Claims, error) {
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
-		return nil, errors.New("token inválido")
+		return nil, errors.New("invalid token")
 	}
 
 	return claims, nil
 }
 
-// ValidarRefreshToken — valida especificamente um refresh token
-func (j *JWTService) ValidarRefreshToken(tokenStr string) (*Claims, error) {
-	claims, err := j.ValidarToken(tokenStr)
+// ValidateRefreshToken - Specifically validates a refresh token
+func (j *JWTService) ValidateRefreshToken(tokenStr string) (*Claims, error) {
+	claims, err := j.ValidateToken(tokenStr)
 	if err != nil {
 		return nil, err
 	}
 	if claims.TokenType != RefreshToken {
-		return nil, errors.New("token não é um refresh token")
+		return nil, errors.New("token is not a refresh token")
 	}
 	return claims, nil
 }

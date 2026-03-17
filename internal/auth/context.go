@@ -4,17 +4,18 @@ import "context"
 
 type contextKey string
 
-const usuarioContextKey contextKey = "usuario_autenticado"
+// UserContextKey - Key used to store/retrieve the user from the context
+const UserContextKey contextKey = "authenticated_user"
 
-// InjetarUsuarioNoContexto — salva o usuário autenticado no contexto da requisição
-// Equivalente ao auth()->user() do Laravel
-func InjetarUsuarioNoContexto(ctx context.Context, claims *Claims) context.Context {
-	return context.WithValue(ctx, usuarioContextKey, claims)
+// InjectUserIntoContext — Saves the authenticated user into the request context
+// Equivalent to Laravel's auth()->user()
+func InjectUserIntoContext(ctx context.Context, claims *Claims) context.Context {
+	return context.WithValue(ctx, UserContextKey, claims)
 }
 
-// UsuarioDoContexto — recupera o usuário autenticado do contexto
-// Equivalente ao auth()->user() ou $request->user() do Laravel
-func UsuarioDoContexto(ctx context.Context) (*Claims, bool) {
-	claims, ok := ctx.Value(usuarioContextKey).(*Claims)
+// UserFromContext — Retrieves the authenticated user from the context
+// Equivalent to Laravel's auth()->user() or $request->user()
+func UserFromContext(ctx context.Context) (*Claims, bool) {
+	claims, ok := ctx.Value(UserContextKey).(*Claims)
 	return claims, ok
 }

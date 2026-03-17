@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"reembolso/internal/auth"
-	"reembolso/internal/middleware"
-	"reembolso/internal/model"
-	"reembolso/internal/service"
+	"template.go/internal/auth"
+	"template.go/internal/middleware"
+	"template.go/internal/model"
+	"template.go/internal/service"
 )
 
 type AuthHandler struct {
@@ -20,15 +20,17 @@ func NewAuthHandler(svc *service.AuthService) *AuthHandler {
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		respondError(w, http.StatusMethodNotAllowed, "método não permitido")
+		respondError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+
 	var req model.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "body inválido")
+		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	usuario, tokens, err := h.authSvc.Register(req)
+
+	user, tokens, err := h.authSvc.Register(req)
 	if err != nil {
 		if middleware.HandleValidation(w, err) {
 			return
@@ -36,19 +38,25 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	respondJSON(w, http.StatusCreated, map[string]interface{}{"usuario": usuario, "tokens": tokens})
+
+	respondJSON(w, http.StatusCreated, map[string]interface{}{
+		"user":   user,
+		"tokens": tokens,
+	})
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		respondError(w, http.StatusMethodNotAllowed, "método não permitido")
+		respondError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+
 	var req model.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "body inválido")
+		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
 	tokens, err := h.authSvc.Login(req)
 	if err != nil {
 		if middleware.HandleValidation(w, err) {
@@ -57,44 +65,51 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
+
 	respondJSON(w, http.StatusOK, tokens)
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		respondError(w, http.StatusMethodNotAllowed, "método não permitido")
+		respondError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+
 	var req model.RefreshRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "body inválido")
+		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
 	tokens, err := h.authSvc.Refresh(req.RefreshToken)
 	if err != nil {
 		respondError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
+
 	respondJSON(w, http.StatusOK, tokens)
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	claims, ok := auth.UsuarioDoContexto(r.Context())
+	// Using the translated UserFromContext
+	claims, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		respondError(w, http.StatusUnauthorized, "não autenticado")
+		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	usuario, err := h.authSvc.Me(claims.UsuarioID)
+
+	user, err := h.authSvc.Me(claims.UserID)
 	if err != nil {
-		respondError(w, http.StatusNotFound, "usuário não encontrado")
+		respondError(w, http.StatusNotFound, "user not found")
 		return
 	}
-	respondJSON(w, http.StatusOK, usuario)
+
+	respondJSON(w, http.StatusOK, user)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{
-		"message": "logout realizado com sucesso. Descarte o token no cliente.",
+		"message": "logout successful. Please discard the token on the client side.",
 	})
 }
 

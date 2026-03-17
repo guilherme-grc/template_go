@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"reembolso/internal/logger"
-	"reembolso/internal/validation"
+	"template.go/internal/logger"
+	"template.go/internal/validation"
 )
 
 // ErrorResponse — formato padrão de erro, igual ao Laravel

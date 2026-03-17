@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"reembolso/internal/logger"
+	"template.go/internal/logger"
 )
 
 // Migrator — equivalente ao sistema de migrations do Laravel
 type Migrator struct {
-	db         *sql.DB
+	db             *sql.DB
 	migrationsPath string
 }
 

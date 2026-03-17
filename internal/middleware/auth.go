@@ -5,48 +5,49 @@ import (
 	"net/http"
 	"strings"
 
-	"reembolso/internal/auth"
+	"template.go/internal/auth"
 )
 
-// Auth — equivalente ao middleware('auth:sanctum') ou middleware('auth:api') do Laravel
-// Protege rotas que exigem autenticação
+// Auth — equivalent to Laravel's middleware('auth:sanctum') or middleware('auth:api')
+// Protects routes that require authentication
 func Auth(jwtSvc *auth.JWTService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Extrai o token do header Authorization: Bearer <token>
+			// Extract token from Authorization: Bearer <token> header
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				respondUnauthorized(w, "token não fornecido")
+				respondUnauthorized(w, "authorization token not provided")
 				return
 			}
 
 			parts := strings.SplitN(authHeader, " ", 2)
 			if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
-				respondUnauthorized(w, "formato inválido. Use: Bearer <token>")
+				respondUnauthorized(w, "invalid format. Use: Bearer <token>")
 				return
 			}
 
-			claims, err := jwtSvc.ValidarToken(parts[1])
+			// Using the translated ValidateToken method
+			claims, err := jwtSvc.ValidateToken(parts[1])
 			if err != nil {
-				respondUnauthorized(w, "token inválido ou expirado")
+				respondUnauthorized(w, "invalid or expired token")
 				return
 			}
 
-			// Garante que é um access token (não refresh)
+			// Ensures it is an access token (not refresh)
 			if claims.TokenType != auth.AccessToken {
-				respondUnauthorized(w, "use o access token para autenticar")
+				respondUnauthorized(w, "please use an access token for authentication")
 				return
 			}
 
-			// Injeta o usuário no contexto — equivalente ao auth()->user()
-			ctx := auth.InjetarUsuarioNoContexto(r.Context(), claims)
+			// Injects user into context — equivalent to auth()->user()
+			ctx := auth.InjectUserIntoContext(r.Context(), claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-// Guest — equivalente ao middleware('guest') do Laravel
-// Bloqueia usuários já autenticados (ex: rota de login)
+// Guest — equivalent to Laravel's middleware('guest')
+// Blocks already authenticated users (e.g., login/register routes)
 func Guest(jwtSvc *auth.JWTService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -54,9 +55,9 @@ func Guest(jwtSvc *auth.JWTService) func(http.Handler) http.Handler {
 			if authHeader != "" {
 				parts := strings.SplitN(authHeader, " ", 2)
 				if len(parts) == 2 {
-					if _, err := jwtSvc.ValidarToken(parts[1]); err == nil {
+					if _, err := jwtSvc.ValidateToken(parts[1]); err == nil {
 						respondJSON(w, http.StatusForbidden, map[string]string{
-							"message": "você já está autenticado",
+							"message": "you are already authenticated",
 						})
 						return
 					}
